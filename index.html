@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Проект "Комменты"</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="container">
+      <ul class="comments">
+        
+      </ul>
+      <div class="add-form">
+        <input
+          type="text"
+          class="add-form-name"
+          placeholder="Введите ваше имя"
+          oninput="checkValue()"
+          
+          
+        />
+        <textarea
+          type="textarea"
+          class="add-form-text"
+          placeholder="Введите ваш коментарий"
+          rows="4"          
+          oninput="checkValue()"
+          
+        ></textarea>
+        <div class="add-form-row">
+          <button class="add-form-button">Написать</button>
+          
+        </div>
+        
+      </div>
+    </div>
+  </body>
+
+  <script>
+
+const buttonInputElement = document.querySelector('.add-form-button');
+const nameInputElement = document.querySelector('.add-form-name');
+const commentInputElement = document.querySelector('.add-form-text');
+const listElement = document.querySelector('.comments');
+buttonInputElement.disabled = true;
+let arrayOfComments=[];
+
+reload();
+
+
+
+// 1. Функция производит GET запрос. Полученные данные обрабатываются в формат использованный в коде.
+
+  function reload() {
+
+    fetch("https://webdev-hw-api.vercel.app/api/v1/marat-rizatdinov/comments", {
+      method: "GET"
+    }).then((response) => {
+          response.json().then((responseData) => {            
+
+            arrayOfComments = responseData.comments.map(el => {
+                  
+
+                   return{
+                      name: el.author.name,
+                      time: myDate(el.date),
+                      text: el.text,
+                      'likes-counter': el.likes,
+                      'likes-class': el.isLiked == true ? '-active-like' : '',
+
+                  };
+                
+                });    
+
+                renderComment();
+
+                likes();
+                
+            });
+      });
+    };
+
+  
+  // 2. Функция рендерит данные в HTML
+
+  function renderComment() {
+
+  const listElement = document.querySelector('.comments');
+  
+
+  listElement.innerHTML = arrayOfComments.map((el,index)=> el=`
+        <li class="comment" data-index='${index}'>
+          <div class="comment-header">
+            <div class="comment-author">${el.name}</div>
+            <div class="comment-time">${el.time}</div>
+          </div>
+          <div class="comment-body">
+            <div class="comment-text">
+              ${el.text}
+            </div>
+          </div>
+          <div class="comment-footer">
+            
+            <div class="likes">
+              <span class="likes-counter">${el['likes-counter']}</span>
+              <button class="like-button ${el['likes-class']}"></button>
+            </div>
+          </div>
+        </li>`).join('');    
+        
+  }
+
+
+  // 3. Создадим функцию которая снимает блокировку кнопки ввода
+
+  function checkValue() {
+    if( nameInputElement.value != '' && commentInputElement.value != '') buttonInputElement.disabled = false; 
+  }
+
+  checkValue();
+
+
+
+// 4. Функция отправляет введенные данные на удаленный сервер. Возвращает обновленные данные и перезаливает страницу
+
+
+  buttonInputElement.addEventListener('click',() => {
+
+    if(nameInputElement.value == '' || commentInputElement.value == '') return;
+
+    nameInputElement.value = nameInputElement.value.replaceAll("&", "&amp;")
+                                                   .replaceAll("<", "&lt;")
+                                                   .replaceAll(">", "&gt;");
+        
+    commentInputElement.value = commentInputElement.value.replaceAll("&", "&amp;")
+                                                         .replaceAll("<", "&lt;")
+                                                         .replaceAll(">", "&gt;")
+                                                         .replaceAll('◄', '<div class ="quote">')
+                                                         .replaceAll('►', '</div><br>');
+
+
+      fetch("https://webdev-hw-api.vercel.app/api/v1/marat-rizatdinov/comments", {
+      method: "POST",
+      body: JSON.stringify({ 
+                text:commentInputElement.value,
+                name: nameInputElement.value
+                })
+      }).then((response) => {
+        response.json().then((responseData) => {
+          
+          reload();                                                         
+          
+        });
+     });
+
+      nameInputElement.value = '';
+      commentInputElement.value = '';
+      buttonInputElement.disabled = true;
+  });
+
+  
+      
+
+// // 5. Создадим функцию шаблон даты
+
+
+  function myDate (a) {
+      let date = new Date(a) || new Date();
+      let monthArray=['01','02','03','04','05','06','07','08','09','10','11','12'];
+      let myMinutes = String(date.getMinutes()).length < 2 ? '0' + date.getMinutes() : date.getMinutes();
+      let myHours = String(date.getHours()).length < 2 ? '0' + date.getHours() : date.getHours();
+      let myDay = String(date.getDate()).length < 2 ? '0' + date.getDate() : date.getDate();
+      let myMonth = monthArray[+date.getMonth()];
+      let myYear = String( date.getFullYear() ).slice(2);
+      let str= myDay + '.' + myMonth + '.' + myYear + ' ' + myHours + ':' + myMinutes;
+      return str;
+  }
+
+  // 6. Обработчик лайков 
+
+  function likes(){
+ 
+    const listItems = listElement.querySelectorAll('.comment');
+
+      for(let key of listItems) {
+
+          const likeButton = key.querySelector('.like-button');
+          const likeCounter = key.querySelector('.likes-counter');
+         
+          likeButton.addEventListener('click',(event) => {
+           
+          event.stopPropagation();  
+          likeButton.classList.toggle('-active-like');
+          likeButton.classList.contains('-active-like') ? likeCounter.innerHTML++ : likeCounter.innerHTML--;
+
+          })
+      }
+  }
+
+  </script>
+</html>
+
